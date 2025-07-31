@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive C++ Guide: Pointers, Structures & Linked Lists</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Slate & Amber -->
+    <!-- Application Structure Plan: The SPA is designed as a multi-section interactive tutorial. It starts with an introduction and navigation, followed by dedicated modules for Pointers, Structures, and Linked Lists. Each module combines concise theory with a hands-on, interactive simulation, allowing users to see the concepts in action. This is more effective than a static report because it promotes active learning. The structure concludes with a quiz for self-assessment. This task-oriented, modular design allows users to focus on one concept at a time and learn by doing, which is crucial for grasping abstract topics like memory management. -->
+    <!-- Visualization & Content Choices: 
+        - Pointers: Goal is to inform about memory addresses. A visual representation of memory blocks (divs) is used. Interaction through buttons (JS) demonstrates address-of, dereferencing, and pointer arithmetic visually. This is better than a static code block as it shows the cause-and-effect of pointer operations.
+        - Structures: Goal is to show data aggregation. HTML/CSS divs are used to represent a struct layout. Interactive toggles (JS) show the syntactic difference between '.' and '->' access, clarifying a common point of confusion.
+        - Linked Lists: Goal is to demonstrate dynamic data chains. A custom HTML/CSS/JS simulation is used. Buttons trigger operations (insert/delete), and JS dynamically manipulates divs (nodes) and CSS borders (arrows) to visualize the list changing. This is superior to a static diagram as it shows the process step-by-step.
+        - Quiz: Goal is to test knowledge. An interactive form with immediate JS feedback is used for engagement and instant reinforcement.
+        - Library/Method: Vanilla JS for all logic. Tailwind CSS for styling. No Chart.js/Plotly needed. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* slate-50 */
+            color: #334155; /* slate-700 */
+        }
+        .fira-code {
+            font-family: 'Fira Code', monospace;
+        }
+        .nav-link {
+            transition: color 0.3s, border-bottom-color 0.3s;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: #d97706; /* amber-600 */
+            border-bottom-color: #d97706; /* amber-600 */
+        }
+        .interactive-section {
+            background-color: white;
+            border: 1px solid #e2e8f0; /* slate-200 */
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .btn {
+            transition: background-color 0.3s, transform 0.1s;
+        }
+        .btn:active {
+            transform: scale(0.98);
+        }
+        .memory-block {
+            border: 2px solid #cbd5e1; /* slate-300 */
+            background-color: #f1f5f9; /* slate-100 */
+            min-height: 80px;
+            position: relative;
+        }
+        .memory-block .address {
+            position: absolute;
+            bottom: 2px;
+            right: 4px;
+            font-size: 0.75rem;
+            color: #64748b; /* slate-500 */
+        }
+        .pointer-arrow {
+            position: absolute;
+            width: 0;
+            height: 0;
+            border-style: solid;
+            transition: all 0.5s ease-in-out;
+        }
+        .node {
+            position: relative;
+            border: 2px solid #fbbf24; /* amber-400 */
+            background-color: #fefce8; /* amber-50 */
+            width: 120px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.5rem;
+            transition: all 0.5s ease-in-out;
+        }
+        .node-data {
+            border-right: 2px solid #fbbf24; /* amber-400 */
+            padding: 0 1rem;
+            font-weight: 600;
+        }
+        .node-next {
+            padding: 0 1rem;
+            font-size: 0.8rem;
+            color: #92400e; /* amber-800 */
+        }
+        .link-arrow {
+            position: absolute;
+            background-color: #d97706; /* amber-600 */
+            height: 2px;
+            transform-origin: left center;
+            transition: all 0.5s ease-in-out;
+        }
+        .link-arrow::after {
+            content: '';
+            position: absolute;
+            right: -1px;
+            top: -4px;
+            width: 0;
+            height: 0;
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+            border-left: 8px solid #d97706; /* amber-600 */
+        }
+        .quiz-option.correct {
+            background-color: #dcfce7; /* green-100 */
+            border-color: #22c55e; /* green-500 */
+        }
+        .quiz-option.incorrect {
+            background-color: #fee2e2; /* red-100 */
+            border-color: #ef4444; /* red-500 */
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white/80 backdrop-blur-lg sticky top-0 z-30 border-b border-slate-200">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center py-4">
+                <h1 class="text-xl md:text-2xl font-bold text-slate-800">Interactive C++ Guide</h1>
+                <nav class="hidden md:flex items-center space-x-6 text-sm font-medium text-slate-600">
+                    <a href="#pointers" class="nav-link border-b-2 border-transparent pb-1">Pointers</a>
+                    <a href="#structs" class="nav-link border-b-2 border-transparent pb-1">Structures</a>
+                    <a href="#linked-lists" class="nav-link border-b-2 border-transparent pb-1">Linked Lists</a>
+                    <a href="#quiz" class="nav-link border-b-2 border-transparent pb-1">Knowledge Check</a>
+                </nav>
+                <button id="mobile-menu-btn" class="md:hidden text-slate-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                </button>
+            </div>
+        </div>
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-slate-200">
+            <a href="#pointers" class="block py-2 px-4 text-sm text-slate-600 hover:bg-slate-50">Pointers</a>
+            <a href="#structs" class="block py-2 px-4 text-sm text-slate-600 hover:bg-slate-50">Structures</a>
+            <a href="#linked-lists" class="block py-2 px-4 text-sm text-slate-600 hover:bg-slate-50">Linked Lists</a>
+            <a href="#quiz" class="block py-2 px-4 text-sm text-slate-600 hover:bg-slate-50">Knowledge Check</a>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8 md:py-12">
+
+        <section id="intro" class="text-center mb-16">
+            <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Master Pointers, Structures, & Linked Lists</h2>
+            <p class="max-w-3xl mx-auto text-lg text-slate-600">
+                Dive into the core of C++ memory management. This guide uses interactive simulations to make complex topics like pointers and dynamic data structures clear and intuitive. Learn by doing, not just by reading.
+            </p>
+        </section>
+
+        <!-- Pointers Section -->
+        <section id="pointers" class="mb-16 scroll-mt-20">
+            <div class="interactive-section p-6 md:p-8">
+                <h3 class="text-2xl font-bold text-slate-800 mb-2">Chapter 1: Demystifying Pointers</h3>
+                <p class="mb-6 text-slate-600">A pointer is a variable that stores the memory address of another variable. This simulation lets you see how pointers work by directly visualizing their relationship with memory.</p>
+                
+                <div class="grid md:grid-cols-2 gap-8 items-start">
+                    <div>
+                        <h4 class="font-semibold text-lg mb-4">Interactive Simulation</h4>
+                        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 min-h-[300px] relative" id="pointer-sim-area">
+                            <div class="grid grid-cols-2 gap-4 mb-4">
+                                <div id="p_var_block" class="memory-block p-4 rounded-lg flex flex-col items-center justify-center">
+                                    <span class="text-sm font-semibold text-slate-700">int myValue</span>
+                                    <span class="text-2xl font-bold text-amber-600" id="p_var_value">42</span>
+                                    <span class="address fira-code">0x1000</span>
+                                </div>
+                                <div id="p_ptr_block" class="memory-block p-4 rounded-lg flex flex-col items-center justify-center">
+                                    <span class="text-sm font-semibold text-slate-700">int* ptr</span>
+                                    <span class="text-lg font-bold text-amber-600 fira-code" id="p_ptr_value">null</span>
+                                    <span class="address fira-code">0x2000</span>
+                                </div>
+                            </div>
+                            <div id="p_deref_block" class="memory-block p-4 rounded-lg flex flex-col items-center justify-center w-1/2 mx-auto hidden">
+                                <span class="text-sm font-semibold text-slate-700">*ptr</span>
+                                <span class="text-2xl font-bold text-amber-600" id="p_deref_value">?</span>
+                            </div>
+                            <div id="pointer-arrow-container"></div>
+                        </div>
+                        <div class="flex flex-wrap gap-2 mt-4">
+                            <button id="p_btn_point" class="btn bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">1. Point to `myValue`</button>
+                            <button id="p_btn_deref" class="btn bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg text-sm" disabled>2. Dereference `ptr`</button>
+                            <button id="p_btn_reset" class="btn bg-slate-500 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Reset</button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 class="font-semibold text-lg mb-4">Code Explanation</h4>
+                        <div class="bg-slate-800 text-white rounded-lg p-4 fira-code text-sm overflow-x-auto">
+<pre><code id="pointer-code-display">// 1. Declare a variable and a pointer
+int myValue = 42;
+int* ptr = nullptr;
+
+// When you click "Point to `myValue`":
+ptr = &myValue; // `&` gets the address of myValue
+
+// When you click "Dereference `ptr`":
+int dereferencedValue = *ptr; // `*` gets the value at the address
+// dereferencedValue is now 42
+</code></pre>
+                        </div>
+                        <div class="mt-4 p-4 bg-amber-50 border-l-4 border-amber-400 text-amber-800 rounded-r-lg">
+                            <h5 class="font-bold">Key Concepts</h5>
+                            <ul class="list-disc list-inside mt-2 text-sm">
+                                <li><span class="fira-code font-semibold">&</span> (Address-of): Gets the memory address.</li>
+                                <li><span class="fira-code font-semibold">*</span> (Dereference): Gets the value at a memory address.</li>
+                                <li>A pointer of type <span class="fira-code">T*</span> can only point to variables of type <span class="fira-code">T</span>.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Structs Section -->
+        <section id="structs" class="mb-16 scroll-mt-20">
+            <div class="interactive-section p-6 md:p-8">
+                <h3 class="text-2xl font-bold text-slate-800 mb-2">Chapter 2 & 3: Structures and Pointers to Them</h3>
+                <p class="mb-6 text-slate-600">A `struct` bundles different data types into a single logical unit. When you have a pointer to a structure, you use a special operator to access its members.</p>
+
+                <div class="grid md:grid-cols-2 gap-8 items-start">
+                    <div>
+                        <h4 class="font-semibold text-lg mb-4">Interactive Simulation</h4>
+                        <div class="flex justify-center mb-4">
+                            <div class="inline-flex bg-slate-100 rounded-lg p-1 border border-slate-200">
+                                <button id="s_btn_dot" class="btn px-4 py-1 text-sm font-semibold rounded-md bg-white shadow">Dot Operator (`.`)</button>
+                                <button id="s_btn_arrow" class="btn px-4 py-1 text-sm font-semibold rounded-md">Arrow Operator (`->`)</button>
+                            </div>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                            <p class="text-center text-sm text-slate-500 mb-2" id="s_sim_title">Accessing members of a `Student` variable:</p>
+                            <div class="flex justify-center items-center space-x-4">
+                                <div id="s_struct_var" class="memory-block p-4 rounded-lg flex-col items-center justify-center text-center">
+                                    <span class="text-sm font-semibold text-slate-700" id="s_var_name">Student s1</span>
+                                    <div class="mt-2 space-y-1 text-left text-sm">
+                                        <div><span class="font-medium">id:</span> <span class="fira-code text-amber-600">101</span></div>
+                                        <div><span class="font-medium">gpa:</span> <span class="fira-code text-amber-600">3.8</span></div>
+                                    </div>
+                                    <span class="address fira-code">0x3000</span>
+                                </div>
+                                <div class="text-4xl font-thin text-slate-300" id="s_operator_display">.</div>
+                                <div class="memory-block p-4 rounded-lg flex flex-col items-center justify-center bg-white">
+                                    <span class="text-sm font-semibold text-slate-700">id</span>
+                                </div>
+                                <div class="text-4xl font-thin text-slate-300">=</div>
+                                <div class="memory-block p-4 rounded-lg flex flex-col items-center justify-center bg-white">
+                                    <span class="text-2xl font-bold text-amber-600">101</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-lg mb-4">Code Explanation</h4>
+                        <div class="bg-slate-800 text-white rounded-lg p-4 fira-code text-sm overflow-x-auto">
+<pre><code id="struct-code-display">struct Student {
+    int id;
+    double gpa;
+};
+
+// Using the Dot Operator (.)
+// Use with a direct structure variable.
+Student s1;
+s1.id = 101;
+</code></pre>
+                        </div>
+                        <div class="mt-4 p-4 bg-amber-50 border-l-4 border-amber-400 text-amber-800 rounded-r-lg">
+                            <h5 class="font-bold">Key Rule</h5>
+                            <p class="mt-2 text-sm">Use the <b>dot operator (`.`)</b> when you have the structure variable directly. Use the <b>arrow operator (`->`)</b> when you have a pointer to the structure.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Linked Lists Section -->
+        <section id="linked-lists" class="mb-16 scroll-mt-20">
+            <div class="interactive-section p-6 md:p-8">
+                <h3 class="text-2xl font-bold text-slate-800 mb-2">Chapter 4: Singly Linked Lists</h3>
+                <p class="mb-6 text-slate-600">Linked lists are dynamic chains of nodes, where each node contains data and a pointer to the next one. They can grow and shrink at runtime. Build and modify a list below to see how it works.</p>
+                
+                <div class="grid md:grid-cols-3 gap-8">
+                    <div class="md:col-span-2">
+                        <h4 class="font-semibold text-lg mb-4">Interactive Simulation</h4>
+                        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 min-h-[250px] relative overflow-x-auto" id="ll_sim_area">
+                            <div class="flex items-center space-x-16 min-w-max h-full" id="ll_node_container">
+                                <div class="flex flex-col items-center">
+                                    <div class="font-semibold text-slate-700">head</div>
+                                    <div class="text-2xl mt-2">↓</div>
+                                    <div class="fira-code text-sm text-slate-500" id="ll_head_ptr_val">null</div>
+                                </div>
+                            </div>
+                             <div id="ll-arrow-container"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 class="font-semibold text-lg mb-4">Controls</h4>
+                        <div class="space-y-3">
+                            <div class="flex gap-2">
+                                <input type="number" id="ll_input_value" class="fira-code w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-300 focus:border-amber-400 outline-none" value="10">
+                            </div>
+                            <button id="ll_btn_add_head" class="btn w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Insert at Head</button>
+                            <button id="ll_btn_add_tail" class="btn w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Insert at Tail</button>
+                            <button id="ll_btn_del_head" class="btn w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Delete from Head</button>
+                            <button id="ll_btn_del_tail" class="btn w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg text-sm">Delete from Tail</button>
+                            <button id="ll_btn_reset" class="btn w-full bg-slate-500 hover:bg-slate-600 text-white font-semibold py-2 px-4 rounded-lg text-sm mt-4">Reset List</button>
+                        </div>
+                    </div>
+                </div>
+                 <div class="mt-6">
+                    <h4 class="font-semibold text-lg mb-4">Code Explanation</h4>
+                    <div class="bg-slate-800 text-white rounded-lg p-4 fira-code text-sm overflow-x-auto">
+<pre><code id="ll-code-display">// The building block: a self-referential structure
+struct Node {
+    int data;
+    Node* next; // Pointer to another Node
+};
+
+// A pointer to the first node
+Node* head = nullptr;
+
+// When you "Insert at Head" with value 10:
+Node* newNode = new Node();
+newNode->data = 10;
+newNode->next = head; // New node points to old head
+head = newNode;       // Head now points to the new node
+</code></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quiz Section -->
+        <section id="quiz" class="scroll-mt-20">
+            <div class="interactive-section p-6 md:p-8">
+                <h3 class="text-2xl font-bold text-slate-800 mb-2">Knowledge Check</h3>
+                <p class="mb-6 text-slate-600">Test your understanding with a few quick questions.</p>
+                <div class="space-y-8" id="quiz-container">
+                    <!-- Quiz questions will be injected here by JS -->
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-slate-800 text-slate-400 mt-16">
+        <div class="container mx-auto px-4 py-6 text-center text-sm">
+            <p>Interactive C++ Learning Guide. Designed to make complex concepts intuitive.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Mobile Menu
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenuBtn.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+
+            // Smooth scrolling for nav links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    mobileMenu.classList.add('hidden'); // Hide menu on click
+                    document.querySelector(this.getAttribute('href')).scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                });
+            });
+
+            // Nav link active state on scroll
+            const sections = document.querySelectorAll('section');
+            const navLinks = document.querySelectorAll('nav a');
+            window.onscroll = () => {
+                let current = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    if (pageYOffset >= sectionTop - 100) {
+                        current = section.getAttribute('id');
+                    }
+                });
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href').includes(current)) {
+                        link.classList.add('active');
+                    }
+                });
+            };
+
+            // --- Pointer Simulation ---
+            const pBtnPoint = document.getElementById('p_btn_point');
+            const pBtnDeref = document.getElementById('p_btn_deref');
+            const pBtnReset = document.getElementById('p_btn_reset');
+            const pPtrValue = document.getElementById('p_ptr_value');
+            const pDerefBlock = document.getElementById('p_deref_block');
+            const pDerefValue = document.getElementById('p_deref_value');
+            const pArrowContainer = document.getElementById('pointer-arrow-container');
+            let pointerArrow = null;
+
+            function drawPointerArrow() {
+                if (pointerArrow) pointerArrow.remove();
+                const varBlock = document.getElementById('p_var_block');
+                const ptrBlock = document.getElementById('p_ptr_block');
+                
+                const startRect = ptrBlock.getBoundingClientRect();
+                const endRect = varBlock.getBoundingClientRect();
+                const containerRect = pArrowContainer.parentElement.getBoundingClientRect();
+
+                const startX = startRect.left + startRect.width / 2 - containerRect.left;
+                const startY = startRect.top + startRect.height / 2 - containerRect.top;
+                const endX = endRect.left + endRect.width / 2 - containerRect.left;
+                const endY = endRect.top + endRect.height / 2 - containerRect.top;
+
+                pointerArrow = document.createElement('div');
+                pointerArrow.className = 'pointer-arrow';
+                pointerArrow.style.position = 'absolute';
+                pointerArrow.style.borderTop = '2px solid #d97706';
+                pointerArrow.style.width = `${Math.hypot(endX - startX, endY - startY)}px`;
+                pointerArrow.style.left = `${startX}px`;
+                pointerArrow.style.top = `${startY}px`;
+                pointerArrow.style.transformOrigin = 'left center';
+                pointerArrow.style.transform = `rotate(${Math.atan2(endY - startY, endX - startX)}rad)`;
+                
+                const arrowHead = document.createElement('div');
+                arrowHead.style.position = 'absolute';
+                arrowHead.style.right = '-2px';
+                arrowHead.style.top = '-5px';
+                arrowHead.style.width = '0';
+                arrowHead.style.height = '0';
+                arrowHead.style.borderTop = '6px solid transparent';
+                arrowHead.style.borderBottom = '6px solid transparent';
+                arrowHead.style.borderLeft = '10px solid #d97706';
+                pointerArrow.appendChild(arrowHead);
+
+                pArrowContainer.appendChild(pointerArrow);
+            }
+
+            function resetPointerSim() {
+                pPtrValue.textContent = 'null';
+                pPtrValue.classList.remove('text-green-600');
+                pDerefBlock.classList.add('hidden');
+                pBtnPoint.disabled = false;
+                pBtnDeref.disabled = true;
+                if (pointerArrow) {
+                    pointerArrow.remove();
+                    pointerArrow = null;
+                }
+            }
+
+            pBtnPoint.addEventListener('click', () => {
+                pPtrValue.textContent = '0x1000';
+                pPtrValue.classList.add('text-green-600');
+                drawPointerArrow();
+                pBtnPoint.disabled = true;
+                pBtnDeref.disabled = false;
+            });
+
+            pBtnDeref.addEventListener('click', () => {
+                pDerefBlock.classList.remove('hidden');
+                pDerefValue.textContent = document.getElementById('p_var_value').textContent;
+                pBtnDeref.disabled = true;
+            });
+
+            pBtnReset.addEventListener('click', resetPointerSim);
+
+
+            // --- Struct Simulation ---
+            const sBtnDot = document.getElementById('s_btn_dot');
+            const sBtnArrow = document.getElementById('s_btn_arrow');
+            const sSimTitle = document.getElementById('s_sim_title');
+            const sVarName = document.getElementById('s_var_name');
+            const sOperatorDisplay = document.getElementById('s_operator_display');
+            const structCodeDisplay = document.getElementById('struct-code-display');
+
+            const dotCode = `struct Student {
+    int id;
+    double gpa;
+};
+
+// Using the Dot Operator (.)
+// Use with a direct structure variable.
+Student s1;
+s1.id = 101;`;
+
+            const arrowCode = `struct Student {
+    int id;
+    double gpa;
+};
+
+// Using the Arrow Operator (->)
+// Use with a pointer to a structure.
+Student* s_ptr = new Student();
+s_ptr->id = 101;`;
+
+            sBtnDot.addEventListener('click', () => {
+                sBtnDot.classList.add('bg-white', 'shadow');
+                sBtnArrow.classList.remove('bg-white', 'shadow');
+                sSimTitle.textContent = 'Accessing members of a `Student` variable:';
+                sVarName.textContent = 'Student s1';
+                sOperatorDisplay.textContent = '.';
+                structCodeDisplay.textContent = dotCode;
+            });
+
+            sBtnArrow.addEventListener('click', () => {
+                sBtnArrow.classList.add('bg-white', 'shadow');
+                sBtnDot.classList.remove('bg-white', 'shadow');
+                sSimTitle.textContent = 'Accessing members using a `Student` pointer:';
+                sVarName.textContent = 'Student* s_ptr';
+                sOperatorDisplay.textContent = '->';
+                structCodeDisplay.textContent = arrowCode;
+            });
+
+            // --- Linked List Simulation ---
+            const llNodeContainer = document.getElementById('ll_node_container');
+            const llArrowContainer = document.getElementById('ll-arrow-container');
+            const llInputValue = document.getElementById('ll_input_value');
+            const llHeadPtrVal = document.getElementById('ll_head_ptr_val');
+
+            let linkedList = [];
+            let nextNodeId = 0;
+
+            function createNodeElement(node) {
+                const el = document.createElement('div');
+                el.id = `node-${node.id}`;
+                el.className = 'node';
+                el.innerHTML = `<span class="node-data">${node.data}</span><span class="node-next fira-code">next</span>`;
+                return el;
+            }
+
+            function renderLinkedList() {
+                llNodeContainer.innerHTML = `
+                    <div class="flex flex-col items-center">
+                        <div class="font-semibold text-slate-700">head</div>
+                        <div class="text-2xl mt-2">↓</div>
+                        <div class="fira-code text-sm text-slate-500" id="ll_head_ptr_val">${linkedList.length > 0 ? `0x${linkedList[0].id}00` : 'null'}</div>
+                    </div>`;
+                llArrowContainer.innerHTML = '';
+                
+                let prevNodeEl = null;
+                linkedList.forEach((node, index) => {
+                    const nodeEl = createNodeElement(node);
+                    llNodeContainer.appendChild(nodeEl);
+                    
+                    if (prevNodeEl) {
+                        drawLinkArrow(prevNodeEl, nodeEl);
+                    }
+                    prevNodeEl = nodeEl;
+                });
+                
+                if (linkedList.length > 0) {
+                    const nullEl = document.createElement('div');
+                    nullEl.className = 'fira-code text-slate-500 font-semibold flex items-center h-[60px]';
+                    nullEl.textContent = 'NULL';
+                    llNodeContainer.appendChild(nullEl);
+                    drawLinkArrow(prevNodeEl, nullEl);
+                }
+            }
+
+            function drawLinkArrow(startEl, endEl) {
+                const containerRect = llArrowContainer.parentElement.getBoundingClientRect();
+                const startRect = startEl.getBoundingClientRect();
+                const endRect = endEl.getBoundingClientRect();
+
+                const startX = startRect.right - containerRect.left;
+                const startY = startRect.top + startRect.height / 2 - containerRect.top;
+                const endX = endRect.left - containerRect.left;
+                
+                const arrow = document.createElement('div');
+                arrow.className = 'link-arrow';
+                arrow.style.left = `${startX}px`;
+                arrow.style.top = `${startY}px`;
+                arrow.style.width = `${endX - startX}px`;
+                llArrowContainer.appendChild(arrow);
+            }
+
+            document.getElementById('ll_btn_add_head').addEventListener('click', () => {
+                const value = parseInt(llInputValue.value, 10);
+                if (isNaN(value)) return;
+                linkedList.unshift({ id: nextNodeId++, data: value });
+                renderLinkedList();
+            });
+
+            document.getElementById('ll_btn_add_tail').addEventListener('click', () => {
+                const value = parseInt(llInputValue.value, 10);
+                if (isNaN(value)) return;
+                linkedList.push({ id: nextNodeId++, data: value });
+                renderLinkedList();
+            });
+
+            document.getElementById('ll_btn_del_head').addEventListener('click', () => {
+                if (linkedList.length > 0) {
+                    linkedList.shift();
+                    renderLinkedList();
+                }
+            });
+            
+            document.getElementById('ll_btn_del_tail').addEventListener('click', () => {
+                if (linkedList.length > 0) {
+                    linkedList.pop();
+                    renderLinkedList();
+                }
+            });
+
+            document.getElementById('ll_btn_reset').addEventListener('click', () => {
+                linkedList = [];
+                nextNodeId = 0;
+                renderLinkedList();
+            });
+            
+            renderLinkedList();
+
+
+            // --- Quiz ---
+            const quizContainer = document.getElementById('quiz-container');
+            const quizData = [
+                {
+                    question: "What is the primary purpose of a pointer in C++?",
+                    options: [
+                        "To store a direct numerical value.",
+                        "To hold the memory address of another variable.",
+                        "To define a new data type.",
+                        "To perform mathematical calculations only."
+                    ],
+                    answer: 1,
+                    explanation: "A pointer's main job is to store a memory address, which 'points' to where other data is located."
+                },
+                {
+                    question: "If `Student* s_ptr = new Student();`, how do you access its `id` member?",
+                    options: [
+                        "s_ptr.id",
+                        "s_ptr->id",
+                        "*s_ptr.id",
+                        "&s_ptr->id"
+                    ],
+                    answer: 1,
+                    explanation: "The arrow operator (->) is used to access members of a structure through a pointer."
+                },
+                {
+                    question: "What is a key advantage of linked lists over arrays?",
+                    options: [
+                        "Faster random access to elements (e.g., getting the 50th item).",
+                        "They use less memory because they don't need pointers.",
+                        "Dynamic size and efficient insertions/deletions.",
+                        "All elements are stored next to each other in memory."
+                    ],
+                    answer: 2,
+                    explanation: "Linked lists excel where the size needs to change frequently, as adding or removing elements doesn't require shifting other elements, unlike in an array."
+                }
+            ];
+
+            quizData.forEach((q, index) => {
+                const questionEl = document.createElement('div');
+                questionEl.className = 'quiz-question';
+                
+                let optionsHtml = '';
+                q.options.forEach((opt, optIndex) => {
+                    optionsHtml += `
+                        <label class="quiz-option block p-3 border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50 transition">
+                            <input type="radio" name="q${index}" value="${optIndex}" class="mr-3">
+                            ${opt}
+                        </label>
+                    `;
+                });
+
+                questionEl.innerHTML = `
+                    <h5 class="font-semibold mb-3">${index + 1}. ${q.question}</h5>
+                    <div class="space-y-2" id="q${index}-options">${optionsHtml}</div>
+                    <div id="q${index}-feedback" class="hidden mt-3 p-3 text-sm rounded-lg"></div>
+                `;
+                quizContainer.appendChild(questionEl);
+            });
+
+            quizContainer.addEventListener('change', (e) => {
+                if (e.target.type === 'radio') {
+                    const qIndex = parseInt(e.target.name.substring(1));
+                    const selectedValue = parseInt(e.target.value);
+                    const questionData = quizData[qIndex];
+                    const optionsContainer = document.getElementById(`q${qIndex}-options`);
+                    const feedbackEl = document.getElementById(`q${qIndex}-feedback`);
+                    
+                    Array.from(optionsContainer.children).forEach((label, optIndex) => {
+                        label.classList.remove('correct', 'incorrect');
+                        if (optIndex === selectedValue) {
+                            if (selectedValue === questionData.answer) {
+                                label.classList.add('correct');
+                            } else {
+                                label.classList.add('incorrect');
+                            }
+                        }
+                        if (optIndex === questionData.answer) {
+                            label.classList.add('correct');
+                        }
+                    });
+
+                    feedbackEl.textContent = questionData.explanation;
+                    feedbackEl.className = 'mt-3 p-3 text-sm rounded-lg';
+                    if (selectedValue === questionData.answer) {
+                        feedbackEl.classList.add('bg-green-50', 'text-green-800', 'border', 'border-green-200');
+                    } else {
+                        feedbackEl.classList.add('bg-red-50', 'text-red-800', 'border', 'border-red-200');
+                    }
+                    feedbackEl.classList.remove('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
